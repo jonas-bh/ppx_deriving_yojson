@@ -261,6 +261,13 @@ let test_default _ctxt =
   assert_roundtrip pp_default default_to_yojson default_of_yojson
                    { def = 42 } "{}"
 
+type default_emit = {
+  def_emit : int [@default 42 ~emit:true];
+} [@@deriving yojson, show]
+let test_default_emit _ctxt =
+  assert_roundtrip pp_default_emit default_emit_to_yojson default_emit_of_yojson
+                   { def_emit = 42; } "{\"def_emit\":42}";
+
 type bidi = int [@@deriving show, to_yojson, of_yojson]
 let test_bidi _ctxt =
   assert_roundtrip pp_bidi bidi_to_yojson bidi_of_yojson
@@ -615,6 +622,7 @@ let suite = "Test ppx_yojson" >::: [
     "test_custpvar"  >:: test_custpvar;
     "test_field_err" >:: test_field_err;
     "test_default"   >:: test_default;
+    "test_default_emit" >:: test_default_emit;
     "test_bidi"      >:: test_bidi;
     "test_custom"    >:  CustomConversions.suite;
     "test_shortcut"  >:: test_shortcut;
