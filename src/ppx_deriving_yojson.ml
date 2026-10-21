@@ -54,6 +54,22 @@ let get_label_attribute (label_attr, ct_attr) label =
   | Some _ as v -> v
   | None -> Attribute.get ct_attr label.pld_type
 
+let get_label_default label =
+  match get_label_attribute attr_default label with
+  | None -> None
+  | Some ({ pexp_desc = Pexp_apply (fn, args); _ } as default) ->
+    let emit_args, other_args =
+      List.partition (fun (lbl, _) -> lbl = Labelled "emit") args in
+    (match emit_args with
+     | [] -> Some (default, false)
+     | [_, { pexp_desc = Pexp_construct ({ txt = Lident (("true" | "false") as b); _ }, None); _ }] ->
+       let default = if other_args = [] then fn else { default with pexp_desc = Pexp_apply (fn, other_args) } in
+       Some (default, b = "true")
+     | _ ->
+       raise_errorf ~loc:default.pexp_loc
+         "%s: the ~emit argument of [@default] must be given once, as true or false" deriver)
+  | Some default -> Some (default, false)
+
 type options = {
   is_strict: bool;
   want_meta: bool;
@@ -303,10 +319,10 @@ let ser_str_of_record ~quoter ~loc varname labels =
       let key = match Attribute.get label_attr_key label with Some s -> s | None -> name in
       let result = [%expr [%e str key],
                     [%e ser_expr_of_typ ~quoter @@ type_add_attrs pld_type pld_attributes] [%e field]] in
-      match get_label_attribute attr_default label with
-      | None ->
+      match get_label_default label with
+      | None | Some (_, true) ->
           [%expr [%e result] :: fields]
-      | Some default ->
+      | Some (default, false) ->
           let default = [%expr ([%e default] : [%t pld_type])] in
           [%expr if [%e field] = [%e Ppx_deriving.quote ~quoter default] then fields else [%e result] :: fields])
   in
@@ -523,9 +539,9 @@ let desu_str_of_record ~quoter ~loc ~is_strict ~error ~path wrap_record labels =
      Exp.case [%pat? _ :: xs] default_case]
   and thunks =
     labels |> List.map (fun ({ pld_name = { txt = name }; pld_type; _ } as label) ->
-      match get_label_attribute attr_default label with
+      match get_label_default label with
       | None   -> error (path @ [name])
-      | Some default ->
+      | Some (default, _) ->
         let default = [%expr ([%e default] : [%t pld_type])] in
         [%expr Ok [%e Ppx_deriving.quote ~quoter default]])
   in
