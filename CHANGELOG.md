@@ -1,3 +1,9 @@
+Unreleased
+------
+
+  * Add `~emit:true` argument to `[@default]` (e.g. `[@default 0 ~emit:true]`)
+    so the field is still emitted when serialized with its default value. @jonas-bh
+
 3.10.0
 ------
 

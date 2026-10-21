@@ -142,6 +142,17 @@ type pagination = {
 
 Fields with default values are not required to be present in inputs and will not be emitted in outputs.
 
+To still emit the field when it equals its default, pass `~emit:true`:
+
+``` ocaml
+type pagination = {
+  pages   : int;
+  current : (int [@default 0 ~emit:true]);
+} [@@deriving yojson]
+```
+
+The field may still be missing from inputs, but it is always present in outputs.
+
 #### [@to_yojson] / [@of_yojson]
 
 One can provide custom serialization or deserialization functions, either
